@@ -12,6 +12,9 @@ import scala.io.Source
  *
  */
 object Parser {
+  val USAGE =
+    """usage:
+      |  LogParser directory""".stripMargin
 
   def apply (filename : String): (StartEnd, Durations, StartEnd, Durations,
     Sequence, VertexListOfTasks, TaskNodes,
@@ -101,8 +104,7 @@ object Parser {
   }
 
   def main(args: Array[String]): Unit = {
-    var directory = "/workspace/RC/5_80_R3/fetched/R3/"
-    if (args.length > 0) directory = args(0)
-    Parser parse directory
+    if (args.length == 1) Parser parse args(0)
+    else println(USAGE)
   }
 }
