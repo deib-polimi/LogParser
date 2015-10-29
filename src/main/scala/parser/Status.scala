@@ -13,35 +13,37 @@ import java.util.Locale
 case class Waiting (tm : Map[String, (Long, Long)], vs : Seq[String],
                     tv : Map[String, Seq[String]], tc : Map[String, String],
                     to : Seq[String], cn : Map[String, String],
-                    stm : Map[String, (Long, Long)])
-  extends Status (tm, vs, tv, tc, to, cn, stm)
+                    stm : Map[String, (Long, Long)], regex : StatusRegex)
+  extends Status (tm, vs, tv, tc, to, cn, stm, regex)
 
-object Start extends Waiting (Map(), Seq(), Map(), Map(), Seq(), Map(), Map())
+case class Start (statusRegex : StatusRegex)
+  extends Waiting (Map(), Seq(), Map(), Map(), Seq(), Map(), Map(), statusRegex)
 
 case class Init (name : String, tm : Map[String, (Long, Long)], vs : Seq[String],
                  tv : Map[String, Seq[String]], tc : Map[String, String],
                  to : Seq[String], cn : Map[String, String],
-                 stm : Map[String, (Long, Long)])
-  extends Status (tm, vs, tv, tc, to, cn, stm)
+                 stm : Map[String, (Long, Long)], regex : StatusRegex)
+  extends Status (tm, vs, tv, tc, to, cn, stm, regex)
 
 case class Started (name : String, startTime : Long, endTime : Long,
                     tm : Map[String, (Long, Long)], vs : Seq[String],
                     tv : Map[String, Seq[String]], tc : Map[String, String],
                     to : Seq[String], cn : Map[String, String],
-                    stm : Map[String, (Long, Long)])
-  extends Status (tm, vs, tv, tc, to, cn, stm)
+                    stm : Map[String, (Long, Long)], regex : StatusRegex)
+  extends Status (tm, vs, tv, tc, to, cn, stm, regex)
 
 case class Shuffling (name : String, startTask : Long, endTask : Long,
                       startShuffle : Long, tm : Map[String, (Long, Long)],
                       vs : Seq[String], tv : Map[String, Seq[String]],
                       tc : Map[String, String], to : Seq[String],
-                      cn : Map[String, String], stm : Map[String, (Long, Long)])
-  extends Status (tm, vs, tv, tc, to, cn, stm)
+                      cn : Map[String, String], stm : Map[String, (Long, Long)],
+                      regex : StatusRegex)
+  extends Status (tm, vs, tv, tc, to, cn, stm, regex)
 
 abstract class Status (tm : Map[String, (Long, Long)], vs : Seq[String],
                        tv : Map[String, Seq[String]], tc : Map[String, String],
                        to : Seq[String], cn : Map[String, String],
-                       stm : Map[String, (Long, Long)]) {
+                       stm : Map[String, (Long, Long)], statusRegex : StatusRegex) {
 
   def times: Map[String, (Long, Long)] = tm
   def vertices: Seq[String] = vs
@@ -50,8 +52,6 @@ abstract class Status (tm : Map[String, (Long, Long)], vs : Seq[String],
   def taskOrder: Seq[String] = to
   def containerToNodes: Map[String, String] = cn
   def shuffleTimes: Map[String, (Long, Long)] = stm
-
-  val statusRegex : StatusRegex = HiveTez
 
   protected def parseTime(input : String) =
     new SimpleDateFormat ("yyyy-MM-dd HH:mm:ss,SSS", Locale.ENGLISH).parse (input).getTime
@@ -105,10 +105,10 @@ abstract class Status (tm : Map[String, (Long, Long)], vs : Seq[String],
         val name = statusRegex.init findFirstIn line
         if (name.isDefined) Init (name.get, times, nextVertices(), nextTaskToVertices(),
           nextTaskToContainers(), nextTaskOrder(),
-          nextContainerToNodes(), shuffleTimes)
+          nextContainerToNodes(), shuffleTimes, statusRegex)
         else Waiting (times, nextVertices(), nextTaskToVertices(),
           nextTaskToContainers(), nextTaskOrder(),
-          nextContainerToNodes(), shuffleTimes)
+          nextContainerToNodes(), shuffleTimes, statusRegex)
 
       case Init (name, _, _, _, _, _, _, _) =>
         val when = statusRegex.date findFirstIn line
@@ -116,11 +116,11 @@ abstract class Status (tm : Map[String, (Long, Long)], vs : Seq[String],
           val time = parseTime (when.get)
           Started (name, time, time, times, nextVertices(), nextTaskToVertices(),
             nextTaskToContainers(), nextTaskOrder(),
-            nextContainerToNodes(), shuffleTimes)
+            nextContainerToNodes(), shuffleTimes, statusRegex)
         }
         else Init (name, times, nextVertices(), nextTaskToVertices(),
           nextTaskToContainers(), nextTaskOrder(),
-          nextContainerToNodes(), shuffleTimes)
+          nextContainerToNodes(), shuffleTimes, statusRegex)
 
       case Started (name, start, end, _, _, _, _, _, _, _) =>
         def lookForShuffle = {
@@ -129,24 +129,26 @@ abstract class Status (tm : Map[String, (Long, Long)], vs : Seq[String],
             if (time.isDefined) Started (name, start, parseTime (time.get),
               times, nextVertices(), nextTaskToVertices(),
               nextTaskToContainers(), nextTaskOrder(),
-              nextContainerToNodes(), shuffleTimes)
+              nextContainerToNodes(), shuffleTimes, statusRegex)
             else Started (name, start, end, times, nextVertices(),
               nextTaskToVertices(), nextTaskToContainers(),
-              nextTaskOrder(), nextContainerToNodes(), shuffleTimes)
+              nextTaskOrder(), nextContainerToNodes(), shuffleTimes,
+              statusRegex)
           }
           statusRegex.startingShuffle findFirstMatchIn line match {
             case Some (_) =>
               val time = parseTime ((statusRegex.date findFirstIn line).get)
               Shuffling (name, start, time, time, times, nextVertices(),
                 nextTaskToVertices(), nextTaskToContainers(),
-                nextTaskOrder(), nextContainerToNodes(), shuffleTimes)
+                nextTaskOrder(), nextContainerToNodes(), shuffleTimes,
+                statusRegex)
             case None => updateTime()
           }
         }
         if (line.isEmpty) Waiting (times + (name -> (start, end)), nextVertices(),
           nextTaskToVertices(), nextTaskToContainers(),
           nextTaskOrder(), nextContainerToNodes(),
-          shuffleTimes)
+          shuffleTimes, statusRegex)
         else lookForShuffle
 
       case Shuffling (name, startTask, endTask, startShuffle, _, _, _, _, _, _, _) =>
@@ -156,10 +158,10 @@ abstract class Status (tm : Map[String, (Long, Long)], vs : Seq[String],
             startShuffle, times, nextVertices(),
             nextTaskToVertices(), nextTaskToContainers(),
             nextTaskOrder(), nextContainerToNodes(),
-            shuffleTimes)
+            shuffleTimes, statusRegex)
           else Shuffling (name, startTask, endTask, startShuffle, times,
             nextVertices(), nextTaskToVertices(), nextTaskToContainers(),
-            nextTaskOrder(), nextContainerToNodes(), shuffleTimes)
+            nextTaskOrder(), nextContainerToNodes(), shuffleTimes, statusRegex)
         }
         statusRegex.endingShuffle findFirstMatchIn line match {
           case Some (_) =>
@@ -167,7 +169,7 @@ abstract class Status (tm : Map[String, (Long, Long)], vs : Seq[String],
             Started (name, startTask, time, times, nextVertices(),
               nextTaskToVertices(), nextTaskToContainers(), nextTaskOrder(),
               nextContainerToNodes(),
-              shuffleTimes + (name -> (startShuffle, time)))
+              shuffleTimes + (name -> (startShuffle, time)), statusRegex)
           case None => updateTime()
         }
     }
