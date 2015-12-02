@@ -14,18 +14,18 @@ import scala.io.Source
 object Parser {
   private val USAGE =
     """usage:
-      |  LogParser directory""".stripMargin
+      |  LogParser -2|-3 directory""".stripMargin
   private val WARN_EMPTY_INPUT = "WARNING: possibly empty input file"
+  private val WRONG_INPUT = "ERROR: wrong input argument"
 
-  private def apply (filename : String): (StartEnd, Durations, StartEnd, Durations,
-    Sequence, VertexListOfTasks, TaskNodes,
+  private def apply (filename : String, regexVersion : StatusRegex): (StartEnd,
+    Durations, StartEnd, Durations, Sequence, VertexListOfTasks, TaskNodes,
     TaskContainers) = {
     println(s"Starting $filename")
     val lines = Source.fromFile(filename).getLines()
 
-    val correctRegex = if (true) HiveTez_HDP22 else HiveTez_HDP23
     val start = System.currentTimeMillis()
-    val finalStatus = ({Start(correctRegex) : Status} /: lines) (_ next _)
+    val finalStatus = ({Start(regexVersion) : Status} /: lines) (_ next _)
     val stop = System.currentTimeMillis()
     val fileSize = new File(filename).length
     val difference = stop - start
@@ -43,11 +43,11 @@ object Parser {
       TaskContainers (finalStatus.taskToContainers, finalStatus.taskOrder))
   }
 
-  private def apply (files : Seq[String]): (String, String, String, String, String,
-    String, String, String) = {
+  private def apply (files : Seq[String], regexVersion : StatusRegex):
+  (String, String, String, String, String, String, String, String) = {
     val (taskStartEnds, taskDurations, shuffleStartEnds, shuffleDurations,
     vertices, listsOfTasks, taskNodes, taskContainers) =
-      files.map (Parser (_))
+      files.map (Parser (_, regexVersion))
         .foldLeft ((Seq (): Seq[StartEnd], Seq (): Seq[Durations],
           Seq (): Seq[StartEnd], Seq (): Seq[Durations],
           Seq (): Seq[Sequence], Seq (): Seq[VertexListOfTasks],
@@ -62,7 +62,7 @@ object Parser {
       taskNodes mkString "\n\n", taskContainers mkString "\n\n")
   }
 
-  private def parse (path : String): Unit = {
+  private def parse (path : String, regexVersion : StatusRegex): Unit = {
     val sourceDir = new File (path).getAbsoluteFile
     val dataDir = new File (sourceDir, "data")
     dataDir.mkdir
@@ -75,7 +75,7 @@ object Parser {
       .map (_.getPath).filter (_.endsWith (".AMLOG.txt")).toSeq
     val (taskStartEndContent, taskDurationContent, shuffleStartEndContent,
     shuffleDurationContent, verticesContent, listOfTasksContent,
-    taskNodesContent, taskContainersContent) = Parser (inputFiles)
+    taskNodesContent, taskContainersContent) = Parser (inputFiles, regexVersion)
     writeToFile (taskStartEndContent, new File (dataDir, "taskStartEnd.txt"))
     writeToFile (taskDurationContent, new File (dataDir, "taskDurationLO.txt"))
     writeToFile (shuffleStartEndContent, new File (dataDir, "shuffleStartEnd.txt"))
@@ -108,8 +108,23 @@ object Parser {
     copy.close()
   }
 
+  private def parseOpts (args: Array[String]) = {
+    val path = args(1)
+    val firstArgument = args(0) match {
+      case "-2" => Some(HiveTez_HDP22)
+      case "-3" => Some(HiveTez_HDP23)
+      case _ => None
+    }
+    firstArgument match {
+      case Some(regexVersion) => Parser.parse(path, regexVersion)
+      case None =>
+        println(WRONG_INPUT)
+        println(USAGE)
+    }
+  }
+
   def main(args: Array[String]): Unit = {
-    if (args.length == 1) Parser parse args(0)
+    if (args.length == 2) Parser parseOpts args
     else println(USAGE)
   }
 }
