@@ -15,11 +15,12 @@ object Parser {
   val USAGE =
     """usage:
       |  LogParser directory""".stripMargin
+  val WARN_EMPTY_INPUT = "WARNING: possibly empty input file"
 
   def apply (filename : String): (StartEnd, Durations, StartEnd, Durations,
     Sequence, VertexListOfTasks, TaskNodes,
     TaskContainers) = {
-    println("Starting " + filename)
+    println(s"Starting $filename")
     val lines = Source.fromFile(filename).getLines()
 
     val start = System.currentTimeMillis()
@@ -31,6 +32,7 @@ object Parser {
     println(s"Finished in $elapsed s")
     val ratioKB = if (difference > 0) fileSize.toLong / difference else 0l
     println(s"$fileSize: $ratioKB KB/s")
+    if (ratioKB == 0) println(WARN_EMPTY_INPUT)
     (StartEnd (finalStatus.times), Durations (finalStatus.times),
       StartEnd (finalStatus.shuffleTimes), Durations (finalStatus.shuffleTimes),
       Sequence (finalStatus.vertices),
