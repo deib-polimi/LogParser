@@ -25,10 +25,12 @@ object Parser {
     val start = System.currentTimeMillis()
     val finalStatus = ({Start(HiveTez_HDP23) : Status} /: lines) (_ next _)
     val stop = System.currentTimeMillis()
-    val i = new File(filename).length
-    println("Finished in " + ((stop - start).toDouble / 1000) + " s")
-    val ratio = i.toLong * 1000 / (stop-start)
-    println(i + ": " + ratio/1000 + "KB/s")
+    val fileSize = new File(filename).length
+    val difference = stop - start
+    val elapsed = difference.toDouble / 1000
+    println(s"Finished in $elapsed s")
+    val ratioKB = if (difference > 0) fileSize.toLong / difference else 0l
+    println(s"$fileSize: $ratioKB KB/s")
     (StartEnd (finalStatus.times), Durations (finalStatus.times),
       StartEnd (finalStatus.shuffleTimes), Durations (finalStatus.shuffleTimes),
       Sequence (finalStatus.vertices),
