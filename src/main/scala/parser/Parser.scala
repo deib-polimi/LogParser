@@ -23,7 +23,7 @@ object Parser {
     val lines = Source.fromFile(filename).getLines()
 
     val start = System.currentTimeMillis()
-    val finalStatus = ({Start(HiveTez) : Status} /: lines) (_ next _)
+    val finalStatus = ({Start(HiveTez_HDP23) : Status} /: lines) (_ next _)
     val stop = System.currentTimeMillis()
     val i = new File(filename).length
     println("Finished in " + ((stop - start).toDouble / 1000) + " s")

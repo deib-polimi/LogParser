@@ -70,7 +70,7 @@ sealed abstract class Status (tm : Map[String, (Long, Long)], vs : Seq[String],
     def nextTaskToVertices(): Map[String, Seq[String]] =
       statusRegex.taskToVertex findFirstMatchIn line match {
         case Some (m) =>
-          val (vertex, task) = (m group 1, m group 2)
+          val (vertex, task) = (m group "vertex", m group "task")
           if (taskToVertices contains vertex) {
             val nextSeq = taskToVertices (vertex) :+ task
             taskToVertices + (vertex -> nextSeq)
@@ -85,21 +85,21 @@ sealed abstract class Status (tm : Map[String, (Long, Long)], vs : Seq[String],
     def nextTaskToContainers(): Map[String, String] =
       statusRegex.taskToContainer findFirstMatchIn line match {
         case Some (m) =>
-          val (task, container) = (m group 1, m group 2)
+          val (task, container) = (m group "task", m group "container")
           taskToContainers + (task -> container)
         case None => taskToContainers
       }
 
     def nextTaskOrder(): Seq[String] =
       statusRegex.taskToContainer findFirstMatchIn line match {
-        case Some (m) => taskOrder :+ (m group 1)
+        case Some (m) => taskOrder :+ (m group "task")
         case None => taskOrder
       }
 
     def nextContainerToNodes(): Map[String, String] =
       statusRegex.receivedContainer findFirstMatchIn line match {
         case Some (m) =>
-          val (container, node) = (m group 1, m group 2)
+          val (container, node) = (m group "container", m group "node")
           containerToNodes + (container -> node)
         case None => containerToNodes
       }
