@@ -12,19 +12,20 @@ import scala.io.Source
  *
  */
 object Parser {
-  val USAGE =
+  private val USAGE =
     """usage:
       |  LogParser directory""".stripMargin
-  val WARN_EMPTY_INPUT = "WARNING: possibly empty input file"
+  private val WARN_EMPTY_INPUT = "WARNING: possibly empty input file"
 
-  def apply (filename : String): (StartEnd, Durations, StartEnd, Durations,
+  private def apply (filename : String): (StartEnd, Durations, StartEnd, Durations,
     Sequence, VertexListOfTasks, TaskNodes,
     TaskContainers) = {
     println(s"Starting $filename")
     val lines = Source.fromFile(filename).getLines()
 
+    val correctRegex = if (true) HiveTez_HDP22 else HiveTez_HDP23
     val start = System.currentTimeMillis()
-    val finalStatus = ({Start(HiveTez_HDP23) : Status} /: lines) (_ next _)
+    val finalStatus = ({Start(correctRegex) : Status} /: lines) (_ next _)
     val stop = System.currentTimeMillis()
     val fileSize = new File(filename).length
     val difference = stop - start
@@ -42,7 +43,7 @@ object Parser {
       TaskContainers (finalStatus.taskToContainers, finalStatus.taskOrder))
   }
 
-  def apply (files : Seq[String]): (String, String, String, String, String,
+  private def apply (files : Seq[String]): (String, String, String, String, String,
     String, String, String) = {
     val (taskStartEnds, taskDurations, shuffleStartEnds, shuffleDurations,
     vertices, listsOfTasks, taskNodes, taskContainers) =
@@ -61,7 +62,7 @@ object Parser {
       taskNodes mkString "\n\n", taskContainers mkString "\n\n")
   }
 
-  def parse (path : String): Unit = {
+  private def parse (path : String): Unit = {
     val sourceDir = new File (path).getAbsoluteFile
     val dataDir = new File (sourceDir, "data")
     dataDir.mkdir
@@ -85,7 +86,7 @@ object Parser {
     writeToFile (taskContainersContent, new File (dataDir, "taskContainer.txt"))
   }
 
-  protected def writeToFile (content: String, file: File): Unit = {
+  private def writeToFile (content: String, file: File): Unit = {
     if (! content.isEmpty) {
       file.delete
       val out = new FileWriter (file)
@@ -98,7 +99,7 @@ object Parser {
     }
   }
 
-  protected def copyFile (from: File, to: File): Unit = {
+  private def copyFile (from: File, to: File): Unit = {
     val content = Source.fromFile (from).mkString
     to.delete
     val copy = new FileWriter(to)
