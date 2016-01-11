@@ -12,5 +12,6 @@ trait StatusRegex {
   val receivedContainer : Regex
   val startingShuffle : Regex
   val endingShuffle : Regex
+  val shuffleBytes : Regex
 
 }

@@ -1,6 +1,6 @@
 /**
- *
- */
+  *
+  */
 package parser
 
 import java.io.{File, FileWriter}
@@ -8,9 +8,9 @@ import java.io.{File, FileWriter}
 import scala.io.Source
 
 /**
- * @author Alessandro
- *
- */
+  * @author Alessandro
+  *
+  */
 object Parser {
   private val USAGE =
     """usage:
@@ -20,7 +20,7 @@ object Parser {
 
   private def apply (filename : String, regexVersion : StatusRegex): (StartEnd,
     Durations, StartEnd, Durations, Sequence, VertexListOfTasks, TaskNodes,
-    TaskContainers) = {
+    TaskContainers, ShuffleBytes) = {
     println(s"Starting $filename")
     val lines = Source.fromFile(filename).getLines()
 
@@ -40,26 +40,30 @@ object Parser {
       VertexListOfTasks (finalStatus.taskToVertices, finalStatus.taskOrder),
       TaskNodes (finalStatus.containerToNodes, finalStatus.taskToContainers,
         finalStatus.taskOrder),
-      TaskContainers (finalStatus.taskToContainers, finalStatus.taskOrder))
+      TaskContainers (finalStatus.taskToContainers, finalStatus.taskOrder),
+      ShuffleBytes (finalStatus.shuffleBytes))
   }
 
   private def apply (files : Seq[String], regexVersion : StatusRegex):
-  (String, String, String, String, String, String, String, String) = {
+  (String, String, String, String, String, String, String, String, String) = {
     val (taskStartEnds, taskDurations, shuffleStartEnds, shuffleDurations,
-    vertices, listsOfTasks, taskNodes, taskContainers) =
+    vertices, listsOfTasks, taskNodes, taskContainers, shuffleBytes) =
       files.map (Parser (_, regexVersion))
         .foldLeft ((Seq (): Seq[StartEnd], Seq (): Seq[Durations],
           Seq (): Seq[StartEnd], Seq (): Seq[Durations],
           Seq (): Seq[Sequence], Seq (): Seq[VertexListOfTasks],
-          Seq (): Seq[TaskNodes], Seq (): Seq[TaskContainers]))
+          Seq (): Seq[TaskNodes], Seq (): Seq[TaskContainers],
+          Seq (): Seq[ShuffleBytes]))
         {(lists, tuple) => (lists._1 :+ tuple._1, lists._2 :+ tuple._2,
           lists._3 :+ tuple._3, lists._4 :+ tuple._4,
           lists._5 :+ tuple._5, lists._6 :+ tuple._6,
-          lists._7 :+ tuple._7, lists._8 :+ tuple._8)}
+          lists._7 :+ tuple._7, lists._8 :+ tuple._8,
+          lists._9 :+ tuple._9)}
     (taskStartEnds mkString "\n\n", taskDurations mkString "\n\n",
       shuffleStartEnds mkString "\n\n", shuffleDurations mkString "\n\n",
       vertices mkString "\n", listsOfTasks mkString "\n\n",
-      taskNodes mkString "\n\n", taskContainers mkString "\n\n")
+      taskNodes mkString "\n\n", taskContainers mkString "\n\n",
+      shuffleBytes mkString "\n\n")
   }
 
   private def parse (path : String, regexVersion : StatusRegex): Unit = {
@@ -75,7 +79,8 @@ object Parser {
       .map (_.getPath).filter (_.endsWith (".AMLOG.txt")).toSeq
     val (taskStartEndContent, taskDurationContent, shuffleStartEndContent,
     shuffleDurationContent, verticesContent, listOfTasksContent,
-    taskNodesContent, taskContainersContent) = Parser (inputFiles, regexVersion)
+    taskNodesContent, taskContainersContent, shuffleBytesContent) =
+      Parser (inputFiles, regexVersion)
     writeToFile (taskStartEndContent, new File (dataDir, "taskStartEnd.txt"))
     writeToFile (taskDurationContent, new File (dataDir, "taskDurationLO.txt"))
     writeToFile (shuffleStartEndContent, new File (dataDir, "shuffleStartEnd.txt"))
@@ -84,6 +89,7 @@ object Parser {
     writeToFile (listOfTasksContent, new File (dataDir, "vertexLtask.txt"))
     writeToFile (taskNodesContent, new File (dataDir, "taskNode.txt"))
     writeToFile (taskContainersContent, new File (dataDir, "taskContainer.txt"))
+    writeToFile (shuffleBytesContent, new File (dataDir, "shuffleBytes.txt"))
   }
 
   private def writeToFile (content: String, file: File): Unit = {

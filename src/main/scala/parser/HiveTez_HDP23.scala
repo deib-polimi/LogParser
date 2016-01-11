@@ -12,5 +12,6 @@ object HiveTez_HDP23 extends StatusRegex {
   override val receivedContainer = new Regex ("""Assigning container to task: containerId=(container_.+_[0-9]+_[0-9]+_[0-9]+_[0-9]+), task=.* containerHost=(\w+)""", "container", "node")
   override val startingShuffle = """Shuffle assigned with""".r
   override val endingShuffle = """Shutting down Shuffle for source""".r
+  override val shuffleBytes = new Regex ( """Final Counters for (attempt_[0-9]+_[0-9]+_[0-9]+_[0-9]+_[0-9]+_[0-9]+):.*SHUFFLE_BYTES=([0-9]+),""", "task", "bytes")
 
 }
