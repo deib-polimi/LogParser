@@ -1,4 +1,4 @@
-/* Copyright 2015 Alessandro Maria Rizzi
+/* Copyright 2015-2016 Alessandro Maria Rizzi
  * Copyright 2016 Eugenio Gianniti
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -74,9 +74,12 @@ object Parser {
       shuffleBytes mkString "\n\n")
   }
 
-  private def parse (path : String, regexVersion : StatusRegex): Unit = {
-    val sourceDir = new File (path).getAbsoluteFile
-    val dataDir = new File (sourceDir, "data")
+  private def parse (path : String, regexVersion : StatusRegex): Unit =
+    parse(path, path, regexVersion);
+
+  def parse(inputDir : String, outputDir : String, regexVersion : StatusRegex) = {
+    val sourceDir = new File (inputDir).getAbsoluteFile
+    val dataDir = new File (outputDir, "data")
     dataDir.mkdir
 
     val appDurationIn = new File (sourceDir, "appDuration.txt")
