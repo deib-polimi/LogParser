@@ -80,11 +80,11 @@ object Parser {
   def parse(inputDir : String, outputDir : String, regexVersion : StatusRegex) = {
     val sourceDir = new File (inputDir).getAbsoluteFile
     val dataDir = new File (outputDir, "data")
-    dataDir.mkdir
+    dataDir.mkdirs();
 
     val appDurationIn = new File (sourceDir, "appDuration.txt")
     val appDurationOut = new File (dataDir, "appDuration.txt")
-    copyFile(appDurationIn, appDurationOut)
+    copyFile(appDurationIn, appDurationOut);
 
     val inputFiles = sourceDir.listFiles ().sortBy (_.getName)
       .map (_.getPath).filter (_.endsWith (".AMLOG.txt")).toSeq

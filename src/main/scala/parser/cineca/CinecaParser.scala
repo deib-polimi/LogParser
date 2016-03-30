@@ -27,13 +27,13 @@ object CinecaParser {
     val directory = new File(mainInput);
     val files = directory.listFiles().map(_.getName).toSeq;
     val mainOutput = CinecaSettings.outputDir + "/" + series;
-    //if(!new File(mainOutput).exists()) {
-    files.foreach(file => Parser.parse(mainInput + "/" + file, mainOutput + "/" + file, HiveTez_Cineca));
-    val result = Process(Seq("rsync", "-r", "--chmod=D775,F664", mainOutput, CinecaSettings.remoteHost)).!;
-    if(result != 0){
-      throw new Exception("Something went wrong!");
+    if(!new File(mainOutput).exists()) {
+      files.foreach(file => Parser.parse(mainInput + "/" + file, mainOutput + "/" + file, HiveTez_Cineca));
+      val result = Process(Seq("rsync", "-r", "--chmod=D775,F664", mainOutput, CinecaSettings.remoteHost)).!;
+      if(result != 0){
+        throw new Exception("Something went wrong!");
+      }
     }
-    //}
   }
 
   def main(args: Array[String]) {
