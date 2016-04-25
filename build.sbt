@@ -1,8 +1,8 @@
 import sbtassembly.AssemblyPlugin.defaultShellScript
 
 lazy val commonSettings = Seq(
-  version := "0.0.1",
-  scalaVersion := "2.11.6"
+  version := "0.0.2",
+  scalaVersion := "2.11.8"
 )
 
 lazy val root = (project in file(".")).
