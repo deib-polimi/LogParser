@@ -52,8 +52,8 @@ object Parser {
       ShuffleBytes (finalStatus.shuffleBytes))
   }
 
-  private def apply (files : Seq[String], regexVersion : StatusRegex):
-  (String, String, String, String, String, String, String, String, String) = {
+  private def apply (files : Seq[String], regexVersion : StatusRegex): (String,
+    String, String, String, String, String, String, String, String) = {
     val (taskStartEnds, taskDurations, shuffleStartEnds, shuffleDurations,
     vertices, listsOfTasks, taskNodes, taskContainers, shuffleBytes) =
       files.map (Parser (_, regexVersion))
@@ -134,11 +134,10 @@ object Parser {
       case None =>
         println(WRONG_INPUT)
         println(USAGE)
+        System exit 1
     }
   }
 
-  def main(args: Array[String]): Unit = {
-    if (args.length == 2) Parser parseOpts args
-    else println(USAGE)
-  }
+  def main(args: Array[String]): Unit = if (args.length == 2) Parser parseOpts args else println(USAGE)
+
 }
