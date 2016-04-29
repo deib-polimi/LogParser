@@ -53,22 +53,14 @@ case class Shuffling (name : String, startTask : Long, endTask : Long,
                       sb : Map[String, Long], regex : StatusRegex)
   extends Status (tm, vs, tv, tc, to, cn, stm, sb, regex)
 
-sealed abstract class Status (tm : Map[String, (Long, Long)], vs : Seq[String],
-                              tv : Map[String, Seq[String]], tc : Map[String, String],
-                              to : Seq[String], cn : Map[String, String],
-                              stm : Map[String, (Long, Long)], sb : Map[String, Long],
-                              statusRegex : StatusRegex) {
+sealed abstract class Status (val times : Map[String, (Long, Long)], val vertices : Seq[String],
+                              val taskToVertices : Map[String, Seq[String]],
+                              val taskToContainers : Map[String, String],
+                              val taskOrder : Seq[String], val containerToNodes : Map[String, String],
+                              val shuffleTimes : Map[String, (Long, Long)],
+                              val shuffleBytes : Map[String, Long], statusRegex : StatusRegex) {
 
-  val times: Map[String, (Long, Long)] = tm
-  val vertices: Seq[String] = vs
-  val taskToVertices: Map[String, Seq[String]] = tv
-  val taskToContainers: Map[String, String] = tc
-  val taskOrder: Seq[String] = to
-  val containerToNodes: Map[String, String] = cn
-  val shuffleTimes: Map[String, (Long, Long)] = stm
-  val shuffleBytes: Map[String, Long] = sb
-
-  protected def parseTime(input : String) =
+  private def parseTime(input : String) =
     new SimpleDateFormat ("yyyy-MM-dd HH:mm:ss,SSS", Locale.ENGLISH).parse (input).getTime
 
   def next (line : String) : Status = {
