@@ -20,6 +20,7 @@ import java.io.{File, FileWriter}
 import scala.io.Source
 
 object Parser {
+
   private val USAGE =
     """usage:
       |  LogParser -2|-3 directory""".stripMargin
@@ -41,7 +42,7 @@ object Parser {
     println(s"Finished in $elapsed s")
     val ratioKB = if (difference > 0) fileSize.toLong / difference else 0l
     println(s"$fileSize: $ratioKB KB/s")
-    if (ratioKB == 0) println(WARN_EMPTY_INPUT)
+    if (ratioKB == 0) Console.err println WARN_EMPTY_INPUT
     (StartEnd (finalStatus.times), Durations (finalStatus.times),
       StartEnd (finalStatus.shuffleTimes), Durations (finalStatus.shuffleTimes),
       Sequence (finalStatus.vertices),
@@ -132,8 +133,8 @@ object Parser {
     firstArgument match {
       case Some(regexVersion) => Parser.parse(path, regexVersion)
       case None =>
-        println(WRONG_INPUT)
-        println(USAGE)
+        Console.err println WRONG_INPUT
+        Console.err println USAGE
         System exit 1
     }
   }
