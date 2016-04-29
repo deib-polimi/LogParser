@@ -16,6 +16,8 @@ package parser
 
 case class ShuffleBytes(bytes: Map[String, Long]) {
 
-  override def toString = bytes map {case (task, byteCount) => s"$task\t$byteCount"} mkString "\n"
+  override lazy val toString = bytes map {
+    case (task, byteCount) => s"$task\t$byteCount"
+  } mkString "\n"
 
 }

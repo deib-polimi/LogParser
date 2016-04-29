@@ -15,5 +15,5 @@
 package parser
 
 case class Sequence (values: Seq[String]) {
-  override def toString: String = values mkString "\t"
+  override lazy val toString: String = values mkString "\t"
 }

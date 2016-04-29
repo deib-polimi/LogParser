@@ -16,11 +16,13 @@ package parser
 
 case class VertexListOfTasks (couples: Map[String, Seq[String]],
                               taskOrder: Seq[String]) {
-  override def toString = lines mkString "\n"
 
-  lazy val lines = for (mapping <- couples) yield {
-    val (key, list) = mapping
-    val currentTasks = taskOrder filter {x => list contains x}
-    key +: currentTasks mkString "\t"
+  override lazy val toString = lines mkString "\n"
+
+  lazy val lines = couples map {
+    case (key, list) =>
+      val currentTasks = taskOrder filter { list contains _ }
+      key +: currentTasks mkString "\t"
   }
+
 }
