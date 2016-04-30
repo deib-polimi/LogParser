@@ -139,7 +139,7 @@ sealed abstract class Status (val times : Map[String, (Long, Long)], val vertice
           nextContainerToNodes, shuffleTimes, nextShuffleBytes(name), statusRegex)
 
       case Started (name, start, end, _, _, _, _, _, _, _, _, _) =>
-        def lookForShuffle = {
+        lazy val lookForShuffle = {
           lazy val nextWithNewTime = {
             val time = statusRegex.date findFirstIn line
             if (time.isDefined) Started (name, start, parseTime (time.get),
@@ -161,24 +161,29 @@ sealed abstract class Status (val times : Map[String, (Long, Long)], val vertice
             case None => nextWithNewTime
           }
         }
-        if (line.isEmpty) Waiting (times + (name -> (start, end)), nextVertices,
-          nextTaskToVertices, nextTaskToContainers,
-          nextTaskOrder, nextContainerToNodes,
-          shuffleTimes, nextShuffleBytes(name), statusRegex)
+        if (line.isEmpty) Waiting (times + (name -> (start, end)), vertices,
+          taskToVertices, taskToContainers, taskOrder, containerToNodes,
+          shuffleTimes, shuffleBytes, statusRegex)
         else lookForShuffle
 
       case Shuffling (name, startTask, endTask, startShuffle, _, _, _, _, _, _, _, _, _) =>
-        lazy val nextWithNewTime = {
-          val time = statusRegex.date findFirstIn line
-          if (time.isDefined) Shuffling (name, startTask, parseTime (time.get),
-            startShuffle, times, nextVertices,
-            nextTaskToVertices, nextTaskToContainers,
-            nextTaskOrder, nextContainerToNodes,
-            shuffleTimes, nextShuffleBytes(name), statusRegex)
-          else Shuffling (name, startTask, endTask, startShuffle, times,
-            nextVertices, nextTaskToVertices, nextTaskToContainers,
-            nextTaskOrder, nextContainerToNodes, shuffleTimes,
-            nextShuffleBytes(name), statusRegex)
+        lazy val lookForEnding = {
+          lazy val nextWithNewTime = {
+            val time = statusRegex.date findFirstIn line
+            if (time.isDefined) Shuffling(name, startTask, parseTime(time.get),
+              startShuffle, times, nextVertices,
+              nextTaskToVertices, nextTaskToContainers,
+              nextTaskOrder, nextContainerToNodes,
+              shuffleTimes, nextShuffleBytes(name), statusRegex)
+            else Shuffling(name, startTask, endTask, startShuffle, times,
+              nextVertices, nextTaskToVertices, nextTaskToContainers,
+              nextTaskOrder, nextContainerToNodes, shuffleTimes,
+              nextShuffleBytes(name), statusRegex)
+          }
+          if (line.isEmpty) Waiting(times + (name -> (startTask, endTask)), vertices,
+            taskToVertices, taskToContainers, taskOrder, containerToNodes,
+            shuffleTimes + (name -> (startShuffle, endTask)), shuffleBytes, statusRegex)
+          else nextWithNewTime
         }
         statusRegex.endingShuffle findFirstMatchIn line match {
           case Some (_) =>
@@ -188,7 +193,7 @@ sealed abstract class Status (val times : Map[String, (Long, Long)], val vertice
               nextContainerToNodes,
               shuffleTimes + (name -> (startShuffle, time)),
               nextShuffleBytes(name), statusRegex)
-          case None => nextWithNewTime
+          case None => lookForEnding
         }
     }
   }
