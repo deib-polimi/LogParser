@@ -77,8 +77,7 @@ sealed abstract class Status (val times : Map[String, (Long, Long)], val vertice
           if (taskToVertices contains vertex) {
             val nextSeq = taskToVertices (vertex) :+ task
             taskToVertices + (vertex -> nextSeq)
-          }
-          else {
+          } else {
             val nextSeq = Seq (task)
             taskToVertices + (vertex -> nextSeq)
           }
@@ -109,51 +108,50 @@ sealed abstract class Status (val times : Map[String, (Long, Long)], val vertice
 
     def nextShuffleBytes(taskName: String) =
       statusRegex.shuffleBytes findFirstMatchIn line match {
-        case Some (m) => val bytes = {m group "bytes"}.toLong
-          val task = try {m group "task"}
-          catch {case e: ArrayIndexOutOfBoundsException => taskName}
+        case Some (m) =>
+          val bytes = { m group "bytes" }.toLong
+          val task = try { m group "task" }
+          catch { case e: ArrayIndexOutOfBoundsException => taskName }
           shuffleBytes + (task -> bytes)
         case None => shuffleBytes
       }
 
     this match {
       case Waiting (_, _, _, _, _, _, _, _, _) =>
-        val name = statusRegex.init findFirstIn line
-        if (name.isDefined) Init (name.get, times, nextVertices, nextTaskToVertices,
-          nextTaskToContainers, nextTaskOrder,
-          nextContainerToNodes, shuffleTimes, shuffleBytes, statusRegex)
-        else Waiting (times, nextVertices, nextTaskToVertices,
-          nextTaskToContainers, nextTaskOrder,
-          nextContainerToNodes, shuffleTimes, shuffleBytes, statusRegex)
+        statusRegex.init findFirstIn line match {
+          case Some(name) =>
+            Init (name, times, nextVertices, nextTaskToVertices, nextTaskToContainers,
+              nextTaskOrder, nextContainerToNodes, shuffleTimes, shuffleBytes, statusRegex)
+          case None =>
+            Waiting (times, nextVertices, nextTaskToVertices, nextTaskToContainers,
+              nextTaskOrder, nextContainerToNodes, shuffleTimes, shuffleBytes, statusRegex)
+        }
 
       case Init (name, _, _, _, _, _, _, _, _, _) =>
-        val when = statusRegex.date findFirstIn line
-        if (when.isDefined) {
-          val time = parseTime (when.get)
-          Started (name, time, time, times, nextVertices, nextTaskToVertices,
-            nextTaskToContainers, nextTaskOrder,
-            nextContainerToNodes, shuffleTimes, nextShuffleBytes(name), statusRegex)
+        statusRegex.date findFirstIn line match {
+          case Some(when) =>
+            val time = parseTime(when)
+            Started (name, time, time, times, nextVertices, nextTaskToVertices,
+              nextTaskToContainers, nextTaskOrder, nextContainerToNodes,
+              shuffleTimes, nextShuffleBytes(name), statusRegex)
+          case None =>
+            Init (name, times, nextVertices, nextTaskToVertices, nextTaskToContainers,
+              nextTaskOrder, nextContainerToNodes, shuffleTimes, nextShuffleBytes(name),
+              statusRegex)
         }
-        else Init (name, times, nextVertices, nextTaskToVertices,
-          nextTaskToContainers, nextTaskOrder,
-          nextContainerToNodes, shuffleTimes, nextShuffleBytes(name), statusRegex)
 
       case Started (name, start, end, _, _, _, _, _, _, _, _, _) =>
         lazy val lookForShuffle = {
+          val maybeTime = statusRegex.date findFirstIn line
           lazy val nextWithNewTime = {
-            val time = statusRegex.date findFirstIn line
-            if (time.isDefined) Started (name, start, parseTime (time.get),
-              times, nextVertices, nextTaskToVertices,
-              nextTaskToContainers, nextTaskOrder,
-              nextContainerToNodes, shuffleTimes, nextShuffleBytes(name), statusRegex)
-            else Started (name, start, end, times, nextVertices,
-              nextTaskToVertices, nextTaskToContainers,
-              nextTaskOrder, nextContainerToNodes, shuffleTimes,
-              nextShuffleBytes(name), statusRegex)
+            val time = maybeTime map parseTime getOrElse end
+            Started (name, start, time, times, nextVertices, nextTaskToVertices,
+              nextTaskToContainers, nextTaskOrder, nextContainerToNodes,
+              shuffleTimes, nextShuffleBytes(name), statusRegex)
           }
           statusRegex.startingShuffle findFirstMatchIn line match {
             case Some (_) =>
-              val time = parseTime ((statusRegex.date findFirstIn line).get)
+              val time = parseTime(maybeTime.get)
               Shuffling (name, start, time, time, times, nextVertices,
                 nextTaskToVertices, nextTaskToContainers,
                 nextTaskOrder, nextContainerToNodes, shuffleTimes,
@@ -167,15 +165,11 @@ sealed abstract class Status (val times : Map[String, (Long, Long)], val vertice
         else lookForShuffle
 
       case Shuffling (name, startTask, endTask, startShuffle, _, _, _, _, _, _, _, _, _) =>
+        val maybeTime = statusRegex.date findFirstIn line
         lazy val lookForEnding = {
           lazy val nextWithNewTime = {
-            val time = statusRegex.date findFirstIn line
-            if (time.isDefined) Shuffling(name, startTask, parseTime(time.get),
-              startShuffle, times, nextVertices,
-              nextTaskToVertices, nextTaskToContainers,
-              nextTaskOrder, nextContainerToNodes,
-              shuffleTimes, nextShuffleBytes(name), statusRegex)
-            else Shuffling(name, startTask, endTask, startShuffle, times,
+            val time = maybeTime map parseTime getOrElse endTask
+            Shuffling(name, startTask, time, startShuffle, times,
               nextVertices, nextTaskToVertices, nextTaskToContainers,
               nextTaskOrder, nextContainerToNodes, shuffleTimes,
               nextShuffleBytes(name), statusRegex)
@@ -187,7 +181,7 @@ sealed abstract class Status (val times : Map[String, (Long, Long)], val vertice
         }
         statusRegex.endingShuffle findFirstMatchIn line match {
           case Some (_) =>
-            val time = parseTime ((statusRegex.date findFirstIn line).get)
+            val time = parseTime(maybeTime.get)
             Started (name, startTask, time, times, nextVertices,
               nextTaskToVertices, nextTaskToContainers, nextTaskOrder,
               nextContainerToNodes,
