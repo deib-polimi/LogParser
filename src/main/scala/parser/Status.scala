@@ -53,6 +53,11 @@ case class Shuffling (name : String, startTask : Long, endTask : Long,
                       sb : Map[String, Long], regex : StatusRegex)
   extends Status (tm, vs, tv, tc, to, cn, stm, sb, regex)
 
+class CleanStatus (tm : Map[String, (Long, Long)], vs : Seq[String], tv : Map[String, Seq[String]],
+                   tc : Map[String, String], to : Seq[String], cn : Map[String, String],
+                   stm : Map[String, (Long, Long)], sb : Map[String, Long], regex : StatusRegex)
+  extends Status (tm, vs, tv, tc, to, cn, stm, sb, regex)
+
 sealed abstract class Status (val times : Map[String, (Long, Long)], val vertices : Seq[String],
                               val taskToVertices : Map[String, Seq[String]],
                               val taskToContainers : Map[String, String],
@@ -62,6 +67,22 @@ sealed abstract class Status (val times : Map[String, (Long, Long)], val vertice
 
   private def parseTime(input : String) =
     new SimpleDateFormat ("yyyy-MM-dd HH:mm:ss,SSS", Locale.ENGLISH).parse (input).getTime
+
+  lazy val clearDuplicateAttempts : Status = {
+    def cleanMap[T] (kvs : Map[String, T]) = kvs groupBy {
+      case (key, _) =>
+        key split "_" dropRight 1 mkString "_"
+    } flatMap {
+      case (_, partialMap) =>
+        val lastAttempt = partialMap.keys maxBy { _.split("_").last }
+        partialMap filterKeys lastAttempt.eq
+    }
+    val cleanTasks = taskOrder groupBy { _ split "_" dropRight 1 mkString "_" } map {
+      case (_, list) => list maxBy { _.split("_").last }
+    }
+    new CleanStatus (cleanMap(times), vertices, taskToVertices, taskToContainers,
+      cleanTasks.toSeq, containerToNodes, cleanMap(shuffleTimes), cleanMap(shuffleBytes), statusRegex)
+  }
 
   def next (line : String) : Status = {
 
@@ -189,6 +210,10 @@ sealed abstract class Status (val times : Map[String, (Long, Long)], val vertice
               nextShuffleBytes(name), statusRegex)
           case None => lookForEnding
         }
+
+      case _ =>
+        // To avoid warnings for possible failures due to CleanStatus not being matched
+        this
     }
   }
 }

@@ -35,6 +35,7 @@ object Parser {
 
     val start = System.currentTimeMillis()
     val finalStatus = ({Start(regexVersion) : Status} /: lines) (_ next _)
+    val cleanStatus = finalStatus.clearDuplicateAttempts
     val stop = System.currentTimeMillis()
     val fileSize = new File(filename).length
     val difference = stop - start
@@ -43,14 +44,14 @@ object Parser {
     val ratioKB = if (difference > 0) fileSize.toLong / difference else 0l
     println(s"$fileSize: $ratioKB KB/s")
     if (ratioKB == 0) Console.err println WARN_EMPTY_INPUT
-    (StartEnd (finalStatus.times), Durations (finalStatus.times),
-      StartEnd (finalStatus.shuffleTimes), Durations (finalStatus.shuffleTimes),
-      Sequence (finalStatus.vertices),
-      VertexListOfTasks (finalStatus.taskToVertices, finalStatus.taskOrder),
-      TaskNodes (finalStatus.containerToNodes, finalStatus.taskToContainers,
-        finalStatus.taskOrder),
-      TaskContainers (finalStatus.taskToContainers, finalStatus.taskOrder),
-      ShuffleBytes (finalStatus.shuffleBytes))
+    (StartEnd (cleanStatus.times), Durations (cleanStatus.times),
+      StartEnd (cleanStatus.shuffleTimes), Durations (cleanStatus.shuffleTimes),
+      Sequence (cleanStatus.vertices),
+      VertexListOfTasks (cleanStatus.taskToVertices, cleanStatus.taskOrder),
+      TaskNodes (cleanStatus.containerToNodes, cleanStatus.taskToContainers,
+        cleanStatus.taskOrder),
+      TaskContainers (cleanStatus.taskToContainers, cleanStatus.taskOrder),
+      ShuffleBytes (cleanStatus.shuffleBytes))
   }
 
   private def apply (files : Seq[String], regexVersion : StatusRegex): (String,
@@ -139,6 +140,11 @@ object Parser {
     }
   }
 
-  def main(args: Array[String]): Unit = if (args.length == 2) Parser parseOpts args else println(USAGE)
+  def main(args: Array[String]): Unit = if (args.length == 2)
+    Parser parseOpts args
+  else {
+    Console.err println USAGE
+    System exit 1
+  }
 
 }
